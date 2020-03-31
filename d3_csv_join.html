@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+  <head>
+    <script src="https://koukita.github.io/websample/js/d3.min.js" type="text/JavaScript"></script>
+    <script src="https://koukita.github.io/websample/js/encoding.min.js"></script>
+    <script src="https://koukita.github.io/websample/js/alasql.min.js"></script>
+    
+    <script>
+      //CSVを読み込んで、文字コードを変換後Jsonに変換＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+      var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
+      req.open("get", "https://www.harp.lg.jp/opendata/dataset/169/resource/2892/hokkaido_opendata.csv", true); // アクセスするファイルを指定
+      req.responseType = 'arraybuffer'; //CSVをバイナリデータとして読み込み（重要）
+      req.send(null); // HTTPリクエストの発行
+      var result = []; // 最終的な二次元配列を入れるための配列
+
+      // 非同期CSVのレスポンスが返ってきたら地図作成処理を行う
+      //文字コードを変換後にJsonに変換
+      req.onload = function(){
+          //UNICODEに文字コード変換したCSVを作成
+          var sjisStr = req.response; //SJISのテキストデータ
+          if (sjisStr){
+              var sjisArray = new Uint8Array(sjisStr)  //文字コードで配列を作成
+              var unicodeArray = Encoding.convert(sjisArray,{ //encoding.jsでSJISをUNIDODEに変換
+                  to: 'UNICODE',
+                  from: 'SJIS'
+              });
+              var unicodeStr = Encoding.codeToString(unicodeArray); //UNICODEのテキストデータ
+              unicodeStr = unicodeStr.replace(/\r/g, '') //Excel特有の改行コード「\r」を削除
+          }
+          var tmp = unicodeStr.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
+
+          // カラム名の取得に使うために配列を作成する
+          result = tmp[0].split(',');
+          console.log(result);
+          //UNICODEテキストからJSONを作成
+          var csv2jsonObj = csvToJson(unicodeStr, { header : 1, columnName : result});
+          console.log(csv2jsonObj);
+
+          //＝＝＝＜D3.jsで地図を描画する＞＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+          var width = 800,    //地図キャンバスの幅
+              height = 600;   //地図キャンバスの高さ
+          var scale = 5000;   //地図のスケール
+
+          //複数のデータを読み込むときの処理：今回は地図のJsonと地名CSVを読み込み
+          var PromiseWrapper = (xhr, d) => new Promise(resolve => xhr(d, (p) => resolve(p)))
+          Promise.all([PromiseWrapper(d3.json, "https://www.harp.lg.jp/opendata/dataset/1379/resource/2889/hokkaido_map_4612.geojson"),
+            PromiseWrapper(d3.csv, "https://www.harp.lg.jp/opendata/dataset/1379/resource/2891/hokkaido_citypoint_4326.csv")])
+            .then( resolve => { createMap(resolve[0], resolve[1])} )
+          
+          //ひとつのJsonのみ読み込むときの処理：北海道地図のGeojsonファイルを指定
+          //d3.json("https://www.harp.lg.jp/opendata/dataset/1379/resource/2889/hokkaido_map_4612.geojson", createMap);
+          
+          //塗りつぶし色の指定
+          function fillColorSet(dataD){
+            //結合データCSVをコードでフィルタする
+            var joinCSV = csv2jsonObj.filter(function(item,index){
+              if (item.コード == dataD.properties.コード) return true;
+            });
+            var joinCsvKeys =Object.keys(joinCSV[0]) //結合するキーを配列で取得
+            //console.log(joinCSV[0])
+            //CSVデータをJsonに結合
+            for ( var i = 0; i < joinCsvKeys.length ; i++ ){
+              dataD.properties[ joinCsvKeys[i] ] = joinCSV[0][ joinCsvKeys[i] ]
+              //console.log(joinCSV[0][ joinCsvKeys[i] ])
+            }
+            //console.log(dataD.properties)
+            var p = dataD.properties;  //地物のプロパティを取得
+            //console.log(p)
+            var fillColor;
+            if (p.ポータル == "1"){ //ここに塗り分けする条件等を記載
+              fillColor = '#ff91ef'
+            }else{
+              if (p.ほだっぷ == '1'){
+                fillColor = '#006aff'
+              }else{
+                if (p.HP == '1'){
+                fillColor = '#00fc22'
+                }else{
+                fillColor = '#ebebeb'
+                }
+              }
+            }
+              // switch~caseの場合
+              // switch(p.ポータル){  //ここに塗り分けするキーを指定
+              //     case "" :fillColor = '#dbdbdb';
+              //     break;
+              //     case "1" :fillColor = '#ff91ef';
+              //     break;
+              //     default:fillColor = "#ffffff";
+              //     break;
+              //   }
+                return fillColor;
+          }
+
+          function createMap(hokkaidoMap,cityPoint) {
+            var aProjection = d3.geoMercator()
+                .center([ 143.95, 43.27 ])  //地図の中心を緯度経度で指定
+                .translate([width/2, height/2])   //地図の中心位置を計算
+                .scale(scale);   //地図のスケール設定
+            var geoPath = d3.geoPath().projection(aProjection);
+            var svg = d3.select("svg").attr("width",width).attr("height",height);
+        
+            var popup_text;
+
+            //マップ描画
+            var map = svg.selectAll("path").data(hokkaidoMap.features)
+              .enter()
+              .append("path")
+                .attr("d", geoPath)
+                .style("stroke", "#000000")  //地物の枠線の色
+                .style("stroke-width", 0.5)  //地物の枠線の太さ
+                .style('fill', d => {return fillColorSet(d)}) //塗りつぶしの色を条件で指定
+                .on('mouseover', function() {  //マウスカーソルが地物に重なった時のイベント
+                    this.style.fill = 'red';  //塗りつぶし色の変更
+                })
+                .on('mouseout', function(d) {  //マウスカーソルが地物から出た時のイベント
+                  this.style.fill =  fillColorSet(d);  ////塗りつぶし色をもとに戻す
+                });
+            
+            //ラベルの描画
+            var map2 = svg.selectAll("text").data(cityPoint)  //市町村ポイント
+              .enter()
+              .append("text")
+                .text( (d) => { return d.市町村名 } )
+                    .attr("x", d => {return aProjection([d.xcoord,d.ycoord])[0]})
+                    .attr("y", d => {return aProjection([d.xcoord,d.ycoord])[1]})
+                    .attr("text-anchor","middle")
+                    .attr('font-size', '2pt');
+
+
+            //ズームイベント設定    
+            var zoom = d3.zoom().on('zoom', function(){
+                aProjection.scale(scale * d3.event.transform.k);
+                map.attr('d', geoPath);
+                map2.attr("x", d => {return aProjection([d.xcoord,d.ycoord])[0]})
+                    .attr("y", d => {return aProjection([d.xcoord,d.ycoord])[1]})
+                    .attr("text-anchor","middle")
+                    .attr('font-size', (2*d3.event.transform.k)+'pt');
+            });
+            svg.call(zoom);
+
+            //ドラッグイベント設定
+            var drag = d3.drag().on('drag', function(){
+                var tl = aProjection.translate();
+                aProjection.translate([tl[0] + d3.event.dx, tl[1] + d3.event.dy]);
+                map.attr('d', geoPath);
+                map2.attr("x", d => {return aProjection([d.xcoord,d.ycoord])[0]})
+                    .attr("y", d => {return aProjection([d.xcoord,d.ycoord])[1]})
+                    .attr("text-anchor","middle")
+                    .attr('font-size', (2*d3.event.transform.k)+'pt');
+            });
+            map.call(drag);
+          }
+
+      }
+
+      //CSVをJsonに変換する関数
+      var csvToJson = function(csvStr, userOptions) {
+          if (typeof csvStr !== 'string') return null;
+          //options
+          //header : 除外するヘッダーの行番号（数値）
+          //columnName : カラム名（配列）
+          //ignoreBlankLine : 空白行の除外（ブーリアン）
+          var options = { header : 0, columnName : [], ignoreBlankLine : true };
+      
+          if (userOptions) {
+              if (userOptions.header) options.header = userOptions.header;
+              if (userOptions.columnName) options.columnName = userOptions.columnName;
+          }
+      
+          var rows = csvStr.split('\n');
+          var json = [], line = [], row = '', data = {};
+          var i, len, j, len2;
+      
+          for (i = 0, len = rows.length; i < len; i++) {
+              if ((i + 1) <= options.header) continue;
+              if (options.ignoreBlankLine && rows[i] === '') continue;
+      
+              line = rows[i].split(',');
+      
+              if (options.columnName.length > 0) {
+                  data = {};
+                  for (j = 0, len2 = options.columnName.length; j < len2; j++) {
+                      if (typeof line[j] !== 'undefined') {
+                          row = line[j];
+                          row = row.replace(/^"(.+)?"$/, '$1');
+                      } else {
+                          row = null;
+                      }
+      
+                      data[options.columnName[j]] = row;
+                  }
+                  json.push(data);
+              } else {
+                  json.push(line);
+              }
+          }
+      
+          return json;
+      };
+
+
+    </script>
+  
+  </head>
+  <body>
+    <svg></svg>
+    
+
+  </body>
+</html>
