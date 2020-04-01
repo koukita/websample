@@ -5,9 +5,9 @@ Excelなどで作成したCSVを、オープンデータポータルにアップ
 https://koukita.github.io/websample/csv2table_array.html
 - テーブル作成にはプラグイン不要（文字コードの変換にencode.jsを使用）
 - サンプルは、条件によりセルの色塗りも行う  
-
-  
-  
+　　
+　　  
+　　  
 ## D3.jsで地図表示とCSV結合＋色塗り
 北海道地図と市町村コードが同じCSVのデータを北海道地図と結合して色分けする
 https://koukita.github.io/websample/d3_csv_join.html  
