@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+  <head>
+    <script type="text/javascript" src="js/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="js/jquery.columns.min.js"></script>
+    <script type="text/JavaScript" src="js/encoding.min.js"></script>
+    <!--link id="style" href="css/clean.css" rel="stylesheet" media="screen"-->
+  <style>
+    table, th, td {
+      border-collapse: collapse;
+      border: 3px solid #ccc;
+      line-height: 1.5;
+    }
+
+    th {
+      /* width: 150px; */
+      padding: 10px;
+      font-weight: bold;
+      vertical-align: top;
+      background: #3f3f3f;
+      color: #ffffff;
+    }
+    td {
+      /*width: 350px;*/
+      padding: 1px;
+      vertical-align: top;
+      font-size: 12px;
+    }
+
+  </style>
+
+  <script>
+    //CSVを読み込んで、文字コードを変換後Jsonに変換＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+    var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
+    req.open("get", "data/hokkaido_opendata.csv", true); // アクセスするファイルを指定
+    req.responseType = 'arraybuffer'; //CSVをバイナリデータとして読み込み（重要）
+    req.send(null); // HTTPリクエストの発行
+    var result = []; // 最終的な二次元配列を入れるための配列
+
+    // 非同期CSVのレスポンスが返ってきたら地図作成処理を行う
+    //文字コードを変換後にJsonに変換
+    req.onload = function(){
+        //UNICODEに文字コード変換したCSVを作成
+        var sjisStr = req.response; //SJISのテキストデータ
+        if (sjisStr){
+            var sjisArray = new Uint8Array(sjisStr)  //文字コードで配列を作成
+            var unicodeArray = Encoding.convert(sjisArray,{ //encoding.jsでSJISをUNIDODEに変換
+                to: 'UNICODE',
+                from: 'SJIS'
+            });
+            var unicodeStr = Encoding.codeToString(unicodeArray); //UNICODEのテキストデータ
+            unicodeStr = unicodeStr.replace(/\r/g, '') //Excel特有の改行コード「\r」を削除
+        }
+        var tmp = unicodeStr.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
+
+        // カラム名の取得に使うために配列を作成する
+        result = tmp[0].split(',');
+        console.log(result);
+        //UNICODEテキストからJSONを作成
+        var csv2jsonObj = csvToJson(unicodeStr, { header : 1, columnName : result});
+        console.log(csv2jsonObj);
+        $('#table_col').columns({
+          data: csv2jsonObj, size: 999,paginating:false
+        });
+
+    }
+    //CSVをJsonに変換する関数
+    var csvToJson = function(csvStr, userOptions) {
+        if (typeof csvStr !== 'string') return null;
+        //options
+        //header : 除外するヘッダーの行番号（数値）
+        //columnName : カラム名（配列）
+        //ignoreBlankLine : 空白行の除外（ブーリアン）
+        var options = { header : 0, columnName : [], ignoreBlankLine : true };
+    
+        if (userOptions) {
+            if (userOptions.header) options.header = userOptions.header;
+            if (userOptions.columnName) options.columnName = userOptions.columnName;
+        }
+    
+        var rows = csvStr.split('\n');
+        var json = [], line = [], row = '', data = {};
+        var i, len, j, len2;
+    
+        for (i = 0, len = rows.length; i < len; i++) {
+            if ((i + 1) <= options.header) continue;
+            if (options.ignoreBlankLine && rows[i] === '') continue;
+    
+            line = rows[i].split(',');
+    
+            if (options.columnName.length > 0) {
+                data = {};
+                for (j = 0, len2 = options.columnName.length; j < len2; j++) {
+                    if (typeof line[j] !== 'undefined') {
+                        row = line[j];
+                        row = row.replace(/^"(.+)?"$/, '$1');
+                    } else {
+                        row = null;
+                    }
+    
+                    data[options.columnName[j]] = row;
+                }
+                json.push(data);
+            } else {
+                json.push(line);
+            }
+        }
+    
+        return json;
+    };
+  </script>
+</head>
+<body>
+
+<div id="table_col"></div>
+
+</body>
+</html>

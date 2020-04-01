@@ -27,6 +27,8 @@
       text-align: center;      /* 文字の位置（中央揃え） */
     }
 
+    td.colcor { background-color: rgb(255, 197, 252);} /* class=colcorのセルの色を変える */
+
   </style>
 
   <script>
@@ -52,21 +54,38 @@
             unicodeStr = unicodeStr.replace(/\r/g, '') //Excel特有の改行コード「\r」を削除
         }
         var tmp = unicodeStr.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
-
+        
+        // 各行ごとにカンマで区切った文字列を要素とした二次元配列を生成
+        for(var i=0; i<tmp.length; ++i){
+          result[i] = tmp[i].split(',');
+        }
         // テーブルをHTMLで作成し、<div>に描画する
-        var tableStr = '<table class="table01"><tbody>'  //テーブルタグ　スタイルシート用のClassも指定
-        tableStr = tableStr + '<tr><th>' + tmp[0].replace(/,/g,'</th><th>') + '</th></tr>' //ヘッダを作成
-        for(var i=1; i<tmp.length; ++i){  //CSV配列を1行ずつ実行して、テーブルを作成
-           if (tmp[i].length != 0){       //データがない場合は除外
-              tableStr= tableStr + '<tr><td>' + tmp[i].replace(/,/g,'</td><td>') + '</td></tr>'  //「,」をタグに置き換えてテーブルの行を作成
-           }
+        var tableStr = '<table class="table01"><tbody>'  //テーブルタグ：スタイルシート用のClassも指定
+        //テーブルのヘッダを作成
+        tableStr = tableStr + '<tr>' 
+        for(var i=0; i < result[0].length; ++i){  //1行目の要素を順番に読み込む
+          tableStr = tableStr + '<th>' + result[0][i] + '</th>' 
+        }
+        tableStr = tableStr + '</tr>'  //終了タグ書き込み
+        //テーブルの各行を作成 
+        for(var i=1; i<result.length; ++i){  //配列を1行づつ読み込む
+          if (result[i].length > 1){         //カラの行は除外
+            tableStr = tableStr + '<tr>'
+            for(var j=0; j < result[i].length; ++j){  //2次配列を要素ごとに読み込み
+              if ((result[i][3]+result[i][4]+result[i][5]) >= 1){  //ポータル、ほだっぷ、HPのいずれかに1が入っていればセルの色を変える
+                tableStr = tableStr + '<td class=colcor>' + result[i][j] + '</td>'   //スタイルシートの色を適用
+              }else{
+                tableStr = tableStr + '<td>' + result[i][j] + '</td>'   //色は変えない
+              }
+            }
+            tableStr = tableStr + '</tr>'  //終了タグ
+          }
         }
         tableStr= tableStr + '</tbody></table>'  //テーブルの終了タグ
         document.getElementById('table_col').innerHTML = tableStr  //HTMLに書き込み
-    }
-
-  </script>
-</head>
+      }
+    </script>
+  </head>
 <body>
 <div id = "table_col"></div>
 
