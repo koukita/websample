@@ -1,12 +1,12 @@
 <!doctype html>
 <html>
   <head>
-    <script type="text/JavaScript" src="js/encoding.min.js"></script>
-    <!--link id="style" href="css/clean.css" rel="stylesheet" media="screen"-->
+    <script type="text/JavaScript" src="https://koukita.github.io/websample/js/encoding.min.js"></script>
+
   <style>
     table, th, td {                       /* tableのスタイル設定 */
       border-collapse: collapse;          /* 枠線を重ねて表示 */
-      border: 1px solid rgb(0, 0, 0);   /* 枠線の太さと色：solid=１本線 */
+      border: 1px solid rgb(165, 165, 165);   /* 枠線の太さと色：solid=１本線 */
       line-height: 1.5;                   /* 行の高さ */
     }
 
@@ -34,7 +34,7 @@
   <script>
     //CSVを読み込んで、文字コードを変換後テーブルに変換＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
     var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
-    req.open("get", "data/hokkaido_opendata.csv", true); // アクセスするファイルを指定
+    req.open("get", "https://www.harp.lg.jp/opendata/dataset/169/resource/2892/hokkaido_opendata.csv", true); // アクセスするファイルを指定
     req.responseType = 'arraybuffer'; //CSVをバイナリデータとして読み込み（重要）
     req.send(null); // HTTPリクエストの発行
     var result = []; // 最終的な二次元配列を入れるための配列
@@ -48,7 +48,7 @@
             var sjisArray = new Uint8Array(sjisStr)  //文字コードで配列を作成
             var unicodeArray = Encoding.convert(sjisArray,{ //encoding.jsでSJISをUNIDODEに変換
                 to: 'UNICODE',
-                from: 'AUTO'
+                from: 'AUTO'  //文字コードの判定は自動
             });
             var unicodeStr = Encoding.codeToString(unicodeArray); //UNICODEのテキストデータ
             unicodeStr = unicodeStr.replace(/\r/g, '') //Excel特有の改行コード「\r」を削除

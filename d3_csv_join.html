@@ -3,7 +3,33 @@
   <head>
     <script type="text/JavaScript" src="https://koukita.github.io/websample/js/d3.min.js"></script>
     <script type="text/JavaScript" src="https://koukita.github.io/websample/js/encoding.min.js"></script>
-    
+    <style>
+      table, th, td {                       /* tableのスタイル設定 */
+        border-collapse: collapse;          /* 枠線を重ねて表示 */
+        border: 1px solid rgb(165, 165, 165);   /* 枠線の太さと色：solid=１本線 */
+        line-height: 1.5;                   /* 行の高さ */
+      }
+  
+      table.table01 th {        /* ID=table01のヘッダ部分のスタイル設定 */
+        /* width: 150px; */     /* 列の幅 */
+        padding: 5px;           /* 枠と文字のスペース */
+        font-weight: bold;      /* 文字の太さ */
+        font-size: 12px;        /* 文字のサイズ */
+        vertical-align: top;    /* 文字の揃え（上端） */
+        background: #3f3f3f;  /* 背景色 */
+        color: #ffffff;       /* 文字色 */
+      }
+      table.table01 td {
+        /*width: 350px;*/        /* 列の幅 */
+        padding: 1px;            /* 枠と文字のスペース */
+        vertical-align: top;     /* 文字の揃え（上端） */
+        font-size: 12px;         /* 文字のサイズ */
+        text-align: center;      /* 文字の位置（中央揃え） */
+      }
+  
+      td.colcor { background-color: rgb(255, 197, 252);} /* class=colcorのセルの色を変える */
+  
+    </style>    
     <script>
       //CSVを読み込んで、文字コードを変換後Jsonに変換＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
       var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
@@ -15,27 +41,67 @@
       // 非同期CSVのレスポンスが返ってきたら地図作成処理を行う
       //文字コードを変換後にJsonに変換
       req.onload = function(){
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+          //　　　CSVの文字コードをUNICODEに変換　　　　　　　＝＝
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
           //UNICODEに文字コード変換したCSVを作成
           var sjisStr = req.response; //SJISのテキストデータ
           if (sjisStr){
               var sjisArray = new Uint8Array(sjisStr)  //文字コードで配列を作成
               var unicodeArray = Encoding.convert(sjisArray,{ //encoding.jsでSJISをUNIDODEに変換
                   to: 'UNICODE',
-                  from: 'SJIS'
+                  from: 'AUTO'  //文字コードの判定は自動
               });
               var unicodeStr = Encoding.codeToString(unicodeArray); //UNICODEのテキストデータ
               unicodeStr = unicodeStr.replace(/\r/g, '') //Excel特有の改行コード「\r」を削除
           }
           var tmp = unicodeStr.split("\n"); // 改行を区切り文字として行を要素とした配列を生成
 
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+          //　　　CSVをテーブルとしてHTMLに表示　　　　　　　＝＝
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+          // 各行ごとにカンマで区切った文字列を要素とした二次元配列を生成
+          for(var i=0; i<tmp.length; ++i){
+            result[i] = tmp[i].split(',');
+          }
+          // テーブルをHTMLで作成し、<div>に描画する
+          var tableStr = '<table class="table01"><tbody>'  //テーブルタグ：スタイルシート用のClassも指定
+          //テーブルのヘッダを作成
+          tableStr = tableStr + '<tr>' 
+          for(var i=0; i < result[0].length; ++i){  //1行目の要素を順番に読み込む
+            tableStr = tableStr + '<th>' + result[0][i] + '</th>' 
+          }
+          tableStr = tableStr + '</tr>'  //終了タグ書き込み
+          //テーブルの各行を作成 
+          for(var i=1; i<result.length; ++i){  //配列を1行づつ読み込む
+            if (result[i].length > 1){         //カラの行は除外
+              tableStr = tableStr + '<tr>'
+              for(var j=0; j < result[i].length; ++j){  //2次配列を要素ごとに読み込み
+                if ((result[i][3]+result[i][4]+result[i][5]) >= 1){  //ポータル、ほだっぷ、HPのいずれかに1が入っていればセルの色を変える
+                  tableStr = tableStr + '<td class=colcor>' + result[i][j] + '</td>'   //スタイルシートの色を適用
+                }else{
+                  tableStr = tableStr + '<td>' + result[i][j] + '</td>'   //色は変えない
+                }
+              }
+              tableStr = tableStr + '</tr>'  //終了タグ
+            }
+          }
+          tableStr= tableStr + '</tbody></table>'  //テーブルの終了タグ
+          document.getElementById('table_col').innerHTML = tableStr  //HTMLに書き込み
+
+
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+          //　　　D3.jsで地図を描画する　　　　　　　　　　　　＝＝
+          //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
           // カラム名の取得に使うために配列を作成する
           result = tmp[0].split(',');
           console.log(result);
+
           //UNICODEテキストからJSONを作成
           var csv2jsonObj = csvToJson(unicodeStr, { header : 1, columnName : result});
           console.log(csv2jsonObj);
 
-          //＝＝＝＜D3.jsで地図を描画する＞＝＝＝＝＝＝＝＝＝＝＝＝＝＝
           var width = 800,    //地図キャンバスの幅
               height = 600;   //地図キャンバスの高さ
           var scale = 5000;   //地図のスケール
@@ -51,11 +117,11 @@
           
           //塗りつぶし色の指定
           function fillColorSet(dataD){
-            //結合データCSVをコードでフィルタする
+            //結合データのJson（元CSV）をコードでフィルタする
             var joinCSV = csv2jsonObj.filter(function(item,index){
               if (item.コード == dataD.properties.コード) return true;
             });
-            var joinCsvKeys =Object.keys(joinCSV[0]) //結合するキーを配列で取得
+            var joinCsvKeys =Object.keys(joinCSV[0]) //結合するCSVのデータを配列で取得
             //console.log(joinCSV[0])
             //CSVデータをJsonに結合
             for ( var i = 0; i < joinCsvKeys.length ; i++ ){
@@ -203,6 +269,7 @@
   <body>
 
     <svg></svg>
+    <div id = "table_col"></div>
 
   </body>
 </html>
