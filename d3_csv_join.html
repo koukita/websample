@@ -33,7 +33,7 @@
     <script>
       //CSVを読み込んで、文字コードを変換後Jsonに変換＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
       var req = new XMLHttpRequest(); // HTTPでファイルを読み込むためのXMLHttpRrequestオブジェクトを生成
-      req.open("get", "https://www.harp.lg.jp/opendata/dataset/169/resource/2892/hokkaido_opendata.csv", true); // アクセスするファイルを指定
+      req.open("get", "data/hokkaido_opendata.csv", true); // アクセスするファイルを指定
       req.responseType = 'arraybuffer'; //CSVをバイナリデータとして読み込み（重要）
       req.send(null); // HTTPリクエストの発行
       var result = []; // 最終的な二次元配列を入れるための配列
