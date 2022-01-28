@@ -1,3 +1,5 @@
+<span style="font-size: 200%; color: red;">北海道のホームページでスクリプトを使っているので削除しないこと</span>
+
 # websample
 CSVを編集してホームページ等にアップすると、ページの表や地図が自動更新されます  
 Excelなどで作成した「Shift-JIS」のCSVも文字化けせずに表示できます。
